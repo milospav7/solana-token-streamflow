@@ -4,10 +4,11 @@
   "private": true,
   "dependencies": {
     "@solana/wallet-adapter-base": "^0.9.14",
+    "@solana/wallet-adapter-phantom": "^0.9.13",
     "@solana/wallet-adapter-react": "^0.15.16",
     "@solana/wallet-adapter-react-ui": "^0.9.14",
-    "@solana/wallet-adapter-phantom": "^0.9.13",
     "@solana/web3.js": "^1.53.0",
+    "@streamflow/stream": "^3.0.12",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
