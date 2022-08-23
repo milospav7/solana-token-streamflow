@@ -34,23 +34,30 @@ interface IValidationErrors {
 const TokenStreamForm = ({ className }: IProps) => {
   const wallet = useAnchorWallet();
   const { connection } = useConnection();
+
   const [errors, setErrors] = useState<IValidationErrors>({});
   const [tokens, setTokens] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [transactionSignatures, setTransactionSignatures] = useState<string[]>(
+    []
+  );
 
   const setAllowedTokenList = async () => {
     let availableTokenMints: string[] = [];
+
     const tokenAccounts = await connection.getTokenAccountsByOwner(
       new PublicKey(wallet?.publicKey.toBase58()!),
       {
         programId: TOKEN_PROGRAM_ID,
       }!
     );
+
     tokenAccounts.value.forEach((tokenAccount) => {
       const accountData = AccountLayout.decode(tokenAccount.account.data);
       if (accountData.amount)
         availableTokenMints.push(accountData.mint.toBase58());
     });
-    console.log(availableTokenMints);
+
     setTokens(availableTokenMints);
   };
 
@@ -103,6 +110,7 @@ const TokenStreamForm = ({ className }: IProps) => {
       const { hasValidationErrors } = validateStreamInputs(userInputs);
       if (hasValidationErrors) return;
 
+      setCreating(true);
       const streamVestingStartTime = new Date();
       const streamCliffStartTime = new Date();
       streamVestingStartTime.setDate(streamVestingStartTime.getDate() + 1);
@@ -125,77 +133,105 @@ const TokenStreamForm = ({ className }: IProps) => {
         transferableBySender: true,
         transferableByRecipient: false,
       };
-      const response = await streamClient.create(stream);
-      console.log("response", response);
+      const { tx } = await streamClient.create(stream);
+      setTransactionSignatures((p) => [...p, tx]);
     } catch (err) {
       console.log(err);
+    } finally {
+      setCreating(false);
     }
   };
 
   return (
-    <form className={className} onSubmit={createTokenStream}>
-      <h5 className="text-center bg-light py-3 rounded">TOKEN STREAM</h5>
-      <div className="mb-3">
-        <label className="form-label">SPL Token</label>
-        <select name="mint" className="form-select">
-          {tokens.map((token) => (
-            <option key={token} value={token}>
-              {token}
-            </option>
-          ))}
-        </select>
-        {errors.mint && <small className="text-danger">*{errors.mint}</small>}
-      </div>
-      <div className="mb-3">
-        <label className="form-label">Stream name</label>
-        <input autoFocus type="text" name="name" className="form-control" />
-        {errors.name && <small className="text-danger">*{errors.name}</small>}
-      </div>
-      <div className="mb-3">
-        <label className="form-label">Recipient address</label>
-        <input
-          type="text"
-          name="recipient"
-          className="form-control"
-          placeholder="Recipient address on Solana.."
-        />
-        {errors.recipient && (
-          <small className="text-danger">*{errors.recipient}</small>
-        )}
-      </div>
-      <div className="mb-3">
-        <label className="form-label">Unlock period</label>
-        <input
-          type="number"
-          min={1}
-          name="period"
-          className="form-control"
-          placeholder="Period step in seconds..."
-        />
-        {errors.period && (
-          <small className="text-danger">*{errors.period}</small>
-        )}
-      </div>
-      <div className="mb-3 form-check">
-        <input name="canTopup" type="checkbox" className="form-check-input" />
-        <label className="form-check-label">Can be topped up</label>
-      </div>
-      <div className="mb-3 form-check">
-        <input
-          name="cancelableBySender"
-          type="checkbox"
-          className="form-check-input"
-        />
-        <label className="form-check-label">
-          Can be cancelled by recipient
-        </label>
-      </div>
-      <div className="border-muted border-top d-flex py-3">
-        <button type="submit" className="btn btn-success mx-auto">
-          CREATE STREAM
-        </button>
-      </div>
-    </form>
+    <div className={className}>
+      <form onSubmit={createTokenStream}>
+        <h5 className="text-center bg-light py-3 rounded text-muted fw-bold">
+          TOKEN STREAM
+        </h5>
+        <div className="mb-3">
+          <label className="form-label text-muted fw-bolder">SPL Token</label>
+          <select name="mint" className="form-select">
+            {tokens.map((token) => (
+              <option key={token} value={token}>
+                {token}
+              </option>
+            ))}
+          </select>
+          {errors.mint && <small className="text-danger">*{errors.mint}</small>}
+        </div>
+        <div className="mb-3">
+          <label className="form-label text-muted fw-bolder">Stream name</label>
+          <input autoFocus type="text" name="name" className="form-control" />
+          {errors.name && <small className="text-danger">*{errors.name}</small>}
+        </div>
+        <div className="mb-3">
+          <label className="form-label text-muted fw-bolder">
+            Recipient address
+          </label>
+          <input
+            type="text"
+            name="recipient"
+            className="form-control"
+            placeholder="Recipient address on Solana.."
+          />
+          {errors.recipient && (
+            <small className="text-danger">*{errors.recipient}</small>
+          )}
+        </div>
+        <div className="mb-3">
+          <label className="form-label text-muted fw-bolder">
+            Unlock period
+          </label>
+          <input
+            type="number"
+            min={1}
+            name="period"
+            className="form-control"
+            placeholder="Period step in seconds..."
+          />
+          {errors.period && (
+            <small className="text-danger">*{errors.period}</small>
+          )}
+        </div>
+        <div className="mb-3 form-check">
+          <input name="canTopup" type="checkbox" className="form-check-input" />
+          <label className="form-check text-muted fw-bolder">
+            Can be topped up
+          </label>
+        </div>
+        <div className="mb-3 form-check">
+          <input
+            name="cancelableBySender"
+            type="checkbox"
+            className="form-check-input"
+          />
+          <label className="form-check text-muted fw-bolder">
+            Can be cancelled by recipient
+          </label>
+        </div>
+        <div className="border-muted border-top d-flex py-3">
+          <button
+            disabled={creating}
+            type="submit"
+            className="btn btn-success mx-auto px-5"
+          >
+            {creating ? "CREATING..." : "CREATE"}
+          </button>
+        </div>
+      </form>
+      {transactionSignatures.length > 0 && (
+        <div>
+          <h5>Completed transaction signatures:</h5>
+          <div className="ps-3">
+            {transactionSignatures.map((sig, i) => (
+              <p className="mb-1" key={i}>
+                {i + 1}) {sig}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

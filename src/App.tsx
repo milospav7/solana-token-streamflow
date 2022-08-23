@@ -36,7 +36,7 @@ function App() {
 
   return (
     <div className="container py-5">
-      <TokenStreamForm className="col-lg-8 col-md-10 col-sm-12 mx-auto" />
+      <TokenStreamForm className="col-lg-7 col-md-8 col-sm-10 mx-auto" />
     </div>
   );
 }
