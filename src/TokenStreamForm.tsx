@@ -1,12 +1,15 @@
+import { Wallet } from "@project-serum/anchor";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import {
   BN,
   Cluster,
-  CreateStreamParams,
+  CreateParams,
   getBN,
   StreamClient,
 } from "@streamflow/stream";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface IProps {
   className?: string;
@@ -30,6 +33,20 @@ const TokenStreamForm = ({ className }: IProps) => {
   const wallet = useAnchorWallet();
   const { connection } = useConnection();
   const [errors, setErrors] = useState<IValidationErrors>({});
+console.log(wallet?.publicKey.toBase58())
+  useEffect(() => {
+    connection
+      .getTokenAccountsByOwner(
+        new PublicKey(wallet?.publicKey.toBase58()!),
+        {
+          programId: TOKEN_PROGRAM_ID,
+        }!
+      )
+      .then((resp) => console.log(resp));
+    connection
+      .getBalance(wallet?.publicKey!)
+      .then((resp) => console.log(resp / LAMPORTS_PER_SOL));
+  }, []);
 
   const streamClient = useMemo(
     () =>
@@ -78,26 +95,25 @@ const TokenStreamForm = ({ className }: IProps) => {
       streamVestingStartTime.setDate(streamVestingStartTime.getDate() + 1);
       streamCliffStartTime.setDate(streamCliffStartTime.getDate() + 2);
 
-      const stream: CreateStreamParams = {
-        sender: wallet!, // Wallet/Keypair signing the transaction, creating and sending the stream.
-        recipient: userInputs.recipient!, // Solana recipient address. - "4ih00075bKjVg000000tLdk4w42NyG3Mv0000dc0M00"
-        mint: "DNw99999M7e24g99999999WJirKeZ5fQc6KY999999gK", // SPL Token mint.
-        start: streamVestingStartTime.getTime() / 1000, // Timestamp (in seconds) when the stream/token vesting starts.
-        depositedAmount: getBN(1000000000000, 9), // Deposited amount of tokens (using smallest denomination).
-        period: parseInt(userInputs.period!), // Time step (period) in seconds per which the unlocking occurs. eg 1
-        cliff: streamCliffStartTime.getTime() / 1000, // Vesting contract "cliff" timestamp in seconds.
-        cliffAmount: new BN(100000000000), // Amount (smallest denomination) unlocked at the "cliff" timestamp.
-        amountPerPeriod: getBN(5000000000, 9), // Release rate: how many tokens are unlocked per each period.
+      const stream: CreateParams = {
+        sender: wallet as Wallet, // Wallet/Keypair signing the transaction, creating and sending the stream.
         name: userInputs.name!, // The stream name or subject.
+        recipient: userInputs.recipient!, // Solana recipient address. - eg 9f5LBDmA1enRXXXqGLSfD9ycRH7qyk4Kcb8smFvk8t8W or 9TXGSBMePiFgRb2bLEQTtUfccLx7ZmkY6HpW1vXZf4Bb
+        mint: "DTd19UNDzMyVHZ8XF7zvFaEW37daUGWcVeTtc7M5Pyth", // SPL Token mint.
+        depositedAmount: getBN(100, 9), // Deposited amount of tokens (using smallest denomination).
+        start: streamVestingStartTime.getTime() / 1000, // Timestamp (in seconds) when the stream/token vesting starts.
+        period: parseInt(userInputs.period!), // Time step (period) in seconds per which the unlocking occurs. eg 1
+        amountPerPeriod: getBN(10, 9), // Release rate: how many tokens are unlocked per each period.
+        cliff: streamCliffStartTime.getTime() / 1000, // Vesting contract "cliff" timestamp in seconds.
+        cliffAmount: new BN(5), // Amount (smallest denomination) unlocked at the "cliff" timestamp.
         canTopup: userInputs.canTopup, // setting to FALSE will effectively create a vesting contract.
         cancelableBySender: userInputs.cancelableBySender, // Whether or not sender can cancel the stream.
         cancelableByRecipient: false, // Whether or not recipient can cancel the stream.
         transferableBySender: true, // Whether or not sender can transfer the stream.
         transferableByRecipient: false, // Whether or not recipient can transfer the stream.
-        connection,
       };
-
-      //   await streamClient.create(stream);
+      const response = await streamClient.create(stream);
+      console.log("response", response);
     } catch (err) {
       console.log(err);
     }
