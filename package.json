@@ -2,7 +2,20 @@
   "name": "solana-token-streamflow",
   "version": "0.1.0",
   "private": true,
+  "files": [
+    "src",
+    ".editorconfig",
+    ".env",
+    ".gitignore",
+    ".prettierignore",
+    ".prettierrc",
+    "LICENSE",
+    "package.json",
+    "tsconfig.json"
+  ],
   "dependencies": {
+    "@solana/spl-token": "^0.3.2",
+    "@solana/spl-token-registry": "^0.2.4574",
     "@solana/wallet-adapter-base": "^0.9.14",
     "@solana/wallet-adapter-phantom": "^0.9.13",
     "@solana/wallet-adapter-react": "^0.15.16",
@@ -12,21 +25,21 @@
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
-    "@solana/spl-token": "^0.3.2",
+    "bootstrap": "^5.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "4.0.3",
-    "web-vitals": "^2.1.4",
-    "bootstrap": "^5.2.0"
+    "web-vitals": "^2.1.4"
   },
   "devDependencies": {
-    "@types/bootstrap": "^5.2.2"
+    "@types/bootstrap": "^5.2.2",
+    "parcel": "^2.3.2",
+    "shx": "^0.3.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "clean": "shx mkdir -p .parcel-cache dist lib && shx rm -rf .parcel-cache dist lib",
+    "start": "parcel src/index.html",
+    "build": "parcel build src/index.html"
   },
   "eslintConfig": {
     "extends": [

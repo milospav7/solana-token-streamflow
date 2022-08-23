@@ -1,7 +1,7 @@
 import { Wallet } from "@project-serum/anchor";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { AccountLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
-import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import {
   BN,
   Cluster,
@@ -19,6 +19,7 @@ interface IStreamUserInputs {
   name?: string;
   recipient?: string;
   period?: string;
+  mint?: string;
   canTopup: boolean;
   cancelableBySender: boolean;
 }
@@ -27,25 +28,35 @@ interface IValidationErrors {
   name?: string;
   recipient?: string;
   period?: string;
+  mint?: string;
 }
 
 const TokenStreamForm = ({ className }: IProps) => {
   const wallet = useAnchorWallet();
   const { connection } = useConnection();
   const [errors, setErrors] = useState<IValidationErrors>({});
-console.log(wallet?.publicKey.toBase58())
+  const [tokens, setTokens] = useState<string[]>([]);
+
+  const setAllowedTokenList = async () => {
+    let availableTokenMints: string[] = [];
+    const tokenAccounts = await connection.getTokenAccountsByOwner(
+      new PublicKey(wallet?.publicKey.toBase58()!),
+      {
+        programId: TOKEN_PROGRAM_ID,
+      }!
+    );
+    tokenAccounts.value.forEach((tokenAccount) => {
+      const accountData = AccountLayout.decode(tokenAccount.account.data);
+      if (accountData.amount)
+        availableTokenMints.push(accountData.mint.toBase58());
+    });
+    console.log(availableTokenMints);
+    setTokens(availableTokenMints);
+  };
+
   useEffect(() => {
-    connection
-      .getTokenAccountsByOwner(
-        new PublicKey(wallet?.publicKey.toBase58()!),
-        {
-          programId: TOKEN_PROGRAM_ID,
-        }!
-      )
-      .then((resp) => console.log(resp));
-    connection
-      .getBalance(wallet?.publicKey!)
-      .then((resp) => console.log(resp / LAMPORTS_PER_SOL));
+    setAllowedTokenList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const streamClient = useMemo(
@@ -67,6 +78,7 @@ console.log(wallet?.publicKey.toBase58())
     if (!inputs.recipient || !inputs.recipient.trim())
       validationErrors.recipient = "Field is required";
     if (!inputs.period) validationErrors.period = "Field is required";
+    if (!inputs.mint) validationErrors.mint = "Field is required";
 
     hasValidationErrors = Object.keys(errors).length > 0;
 
@@ -81,6 +93,7 @@ console.log(wallet?.publicKey.toBase58())
       const formData = new FormData(event.currentTarget);
       const userInputs: IStreamUserInputs = {
         name: formData.get("name")?.toString(),
+        mint: formData.get("mint")?.toString(),
         recipient: formData.get("recipient")?.toString(),
         period: formData.get("period")?.toString(),
         canTopup: formData.get("canTopup") === "on",
@@ -96,21 +109,21 @@ console.log(wallet?.publicKey.toBase58())
       streamCliffStartTime.setDate(streamCliffStartTime.getDate() + 2);
 
       const stream: CreateParams = {
-        sender: wallet as Wallet, // Wallet/Keypair signing the transaction, creating and sending the stream.
-        name: userInputs.name!, // The stream name or subject.
-        recipient: userInputs.recipient!, // Solana recipient address. - eg 9f5LBDmA1enRXXXqGLSfD9ycRH7qyk4Kcb8smFvk8t8W or 9TXGSBMePiFgRb2bLEQTtUfccLx7ZmkY6HpW1vXZf4Bb
-        mint: "DTd19UNDzMyVHZ8XF7zvFaEW37daUGWcVeTtc7M5Pyth", // SPL Token mint.
-        depositedAmount: getBN(100, 9), // Deposited amount of tokens (using smallest denomination).
-        start: streamVestingStartTime.getTime() / 1000, // Timestamp (in seconds) when the stream/token vesting starts.
-        period: parseInt(userInputs.period!), // Time step (period) in seconds per which the unlocking occurs. eg 1
-        amountPerPeriod: getBN(10, 9), // Release rate: how many tokens are unlocked per each period.
-        cliff: streamCliffStartTime.getTime() / 1000, // Vesting contract "cliff" timestamp in seconds.
-        cliffAmount: new BN(5), // Amount (smallest denomination) unlocked at the "cliff" timestamp.
-        canTopup: userInputs.canTopup, // setting to FALSE will effectively create a vesting contract.
-        cancelableBySender: userInputs.cancelableBySender, // Whether or not sender can cancel the stream.
-        cancelableByRecipient: false, // Whether or not recipient can cancel the stream.
-        transferableBySender: true, // Whether or not sender can transfer the stream.
-        transferableByRecipient: false, // Whether or not recipient can transfer the stream.
+        sender: wallet as Wallet,
+        name: userInputs.name!,
+        recipient: userInputs.recipient!, // 9f5LBDmA1enRXXXqGLSfD9ycRH7qyk4Kcb8smFvk8t8W or 9TXGSBMePiFgRb2bLEQTtUfccLx7ZmkY6HpW1vXZf4Bb
+        mint: userInputs.mint!,
+        depositedAmount: getBN(100, 9),
+        start: streamVestingStartTime.getTime() / 1000, // in seconds
+        period: parseInt(userInputs.period!), // in seconds
+        amountPerPeriod: getBN(10, 9),
+        cliff: streamCliffStartTime.getTime() / 1000, // in seconds.
+        cliffAmount: new BN(5),
+        canTopup: userInputs.canTopup,
+        cancelableBySender: userInputs.cancelableBySender,
+        cancelableByRecipient: false,
+        transferableBySender: true,
+        transferableByRecipient: false,
       };
       const response = await streamClient.create(stream);
       console.log("response", response);
@@ -122,6 +135,17 @@ console.log(wallet?.publicKey.toBase58())
   return (
     <form className={className} onSubmit={createTokenStream}>
       <h5 className="text-center bg-light py-3 rounded">TOKEN STREAM</h5>
+      <div className="mb-3">
+        <label className="form-label">SPL Token</label>
+        <select name="mint" className="form-select">
+          {tokens.map((token) => (
+            <option key={token} value={token}>
+              {token}
+            </option>
+          ))}
+        </select>
+        {errors.mint && <small className="text-danger">*{errors.mint}</small>}
+      </div>
       <div className="mb-3">
         <label className="form-label">Stream name</label>
         <input autoFocus type="text" name="name" className="form-control" />
