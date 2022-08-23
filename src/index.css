@@ -10,3 +10,7 @@ html, body {
     display: flex;
     justify-content: center;
 }
+
+.word-break-all {
+    word-break: break-all;
+}

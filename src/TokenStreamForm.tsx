@@ -43,22 +43,26 @@ const TokenStreamForm = ({ className }: IProps) => {
   );
 
   const setAllowedTokenList = async () => {
-    let availableTokenMints: string[] = [];
+    try {
+      let availableTokenMints: string[] = [];
 
-    const tokenAccounts = await connection.getTokenAccountsByOwner(
-      new PublicKey(wallet?.publicKey.toBase58()!),
-      {
-        programId: TOKEN_PROGRAM_ID,
-      }!
-    );
+      const tokenAccounts = await connection.getTokenAccountsByOwner(
+        new PublicKey(wallet?.publicKey.toBase58()!),
+        {
+          programId: TOKEN_PROGRAM_ID,
+        }!
+      );
 
-    tokenAccounts.value.forEach((tokenAccount) => {
-      const accountData = AccountLayout.decode(tokenAccount.account.data);
-      if (accountData.amount)
-        availableTokenMints.push(accountData.mint.toBase58());
-    });
+      tokenAccounts.value.forEach((tokenAccount) => {
+        const accountData = AccountLayout.decode(tokenAccount.account.data);
+        if (accountData.amount)
+          availableTokenMints.push(accountData.mint.toBase58());
+      });
 
-    setTokens(availableTokenMints);
+      setTokens(availableTokenMints);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   useEffect(() => {
@@ -87,7 +91,7 @@ const TokenStreamForm = ({ className }: IProps) => {
     if (!inputs.period) validationErrors.period = "Field is required";
     if (!inputs.mint) validationErrors.mint = "Field is required";
 
-    hasValidationErrors = Object.keys(errors).length > 0;
+    hasValidationErrors = Object.keys(validationErrors).length > 0;
 
     setErrors(validationErrors);
 
@@ -108,6 +112,7 @@ const TokenStreamForm = ({ className }: IProps) => {
       };
 
       const { hasValidationErrors } = validateStreamInputs(userInputs);
+      console.log(hasValidationErrors);
       if (hasValidationErrors) return;
 
       setCreating(true);
@@ -173,6 +178,7 @@ const TokenStreamForm = ({ className }: IProps) => {
             name="recipient"
             className="form-control"
             placeholder="Recipient address on Solana.."
+            defaultValue="9f5LBDmA1enRXXXqGLSfD9ycRH7qyk4Kcb8smFvk8t8W"
           />
           {errors.recipient && (
             <small className="text-danger">*{errors.recipient}</small>
@@ -224,7 +230,7 @@ const TokenStreamForm = ({ className }: IProps) => {
           <h5>Completed transaction signatures:</h5>
           <div className="ps-3">
             {transactionSignatures.map((sig, i) => (
-              <p className="mb-1" key={i}>
+              <p className="mb-1 word-break-all" key={i}>
                 {i + 1}) {sig}
               </p>
             ))}
