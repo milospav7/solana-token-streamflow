@@ -36,15 +36,15 @@ const TokenStreamForm = ({ className }: IProps) => {
   const { connection } = useConnection();
 
   const [errors, setErrors] = useState<IValidationErrors>({});
-  const [tokens, setTokens] = useState<string[]>([]);
+  const [splTokens, setSplTokens] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [transactionSignatures, setTransactionSignatures] = useState<string[]>(
     []
   );
 
-  const setAllowedTokenList = async () => {
+  const setAllowedSplTokenList = async () => {
     try {
-      let availableTokenMints: string[] = [];
+      let availableTokens: string[] = [];
 
       const tokenAccounts = await connection.getTokenAccountsByOwner(
         new PublicKey(wallet?.publicKey.toBase58()!),
@@ -56,17 +56,17 @@ const TokenStreamForm = ({ className }: IProps) => {
       tokenAccounts.value.forEach((tokenAccount) => {
         const accountData = AccountLayout.decode(tokenAccount.account.data);
         if (accountData.amount)
-          availableTokenMints.push(accountData.mint.toBase58());
+          availableTokens.push(accountData.mint.toBase58());
       });
 
-      setTokens(availableTokenMints);
+      setSplTokens(availableTokens);
     } catch (error) {
       console.log(error);
     }
   };
 
   useEffect(() => {
-    setAllowedTokenList();
+    setAllowedSplTokenList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -158,7 +158,7 @@ const TokenStreamForm = ({ className }: IProps) => {
         <div className="mb-3">
           <label className="form-label text-muted fw-bolder">SPL Token</label>
           <select name="mint" className="form-select">
-            {tokens.map((token) => (
+            {splTokens.map((token) => (
               <option key={token} value={token}>
                 {token}
               </option>
