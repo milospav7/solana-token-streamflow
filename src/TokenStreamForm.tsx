@@ -101,6 +101,8 @@ const TokenStreamForm = ({ className }: IProps) => {
   const createTokenStream = async (event: React.FormEvent<HTMLFormElement>) => {
     try {
       event.preventDefault();
+
+      // NOTE: For this case there was no need to use controlled fields(store each field inside react element state), instead I just used form event to retrieve values from uncontrolled fields
       const formData = new FormData(event.currentTarget);
       const userInputs: IStreamUserInputs = {
         name: formData.get("name")?.toString(),
@@ -124,7 +126,7 @@ const TokenStreamForm = ({ className }: IProps) => {
       const stream: CreateParams = {
         sender: wallet as Wallet,
         name: userInputs.name!,
-        recipient: userInputs.recipient!, // 9f5LBDmA1enRXXXqGLSfD9ycRH7qyk4Kcb8smFvk8t8W or 9TXGSBMePiFgRb2bLEQTtUfccLx7ZmkY6HpW1vXZf4Bb
+        recipient: userInputs.recipient!, // 9f5LBDmA1enRXXXqGLSfD9ycRH7qyk4Kcb8smFvk8t8W or 9TXGSBMePiFgRb2bLEQTtUfccLx7ZmkY6HpW1vXZf4Bb (test addresses)
         mint: userInputs.mint!,
         depositedAmount: getBN(100, 9),
         start: streamVestingStartTime.getTime() / 1000, // in seconds
